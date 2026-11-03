@@ -1,0 +1,717 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tally Habits</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tally">
+<meta name="theme-color" content="#F3F4F2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F1110" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" href="icons/icon-192.png">
+<style>
+/* Layout: one narrow column like a native iOS app; quiet ground, white grouped lists, fixed tab bar. No gradients, no glass. */
+:root {
+  --bg: #F3F4F2;
+  --surface: #FFFFFF;
+  --fg: #161917;
+  --muted: #69706B;
+  --line: #E1E4DF;
+  --accent: #2F6B4F;
+  --accent-soft: #DDE9E2;
+  --accent-fg: #FFFFFF;
+  --danger: #B4441F;
+  --bar-idle: #C9D6CE;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, system-ui, sans-serif;
+  --font-num: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --r: 14px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F1110; --surface: #1A1D1B; --fg: #ECEFEC; --muted: #959C97; --line: #2A2F2C;
+    --accent: #72C49A; --accent-soft: #1E3328; --accent-fg: #0C130F; --danger: #E5875E; --bar-idle: #33463B;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F1110; --surface: #1A1D1B; --fg: #ECEFEC; --muted: #959C97; --line: #2A2F2C;
+  --accent: #72C49A; --accent-soft: #1E3328; --accent-fg: #0C130F; --danger: #E5875E; --bar-idle: #33463B;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; }
+body {
+  background: var(--bg); color: var(--fg);
+  font: 16px/1.4 var(--font);
+  -webkit-font-smoothing: antialiased;
+  touch-action: manipulation;
+}
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+[hidden] { display: none !important; }
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+
+.wrap {
+  max-width: 560px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 12px calc(96px + env(safe-area-inset-bottom, 0px));
+}
+.standalone .wrap { padding-top: calc(12px + env(safe-area-inset-top, 0px)); }
+
+/* Header */
+.top { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; padding-block: 8px 16px; }
+.top h1 { margin: 0; font-size: 32px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; text-wrap: balance; }
+.top .sub { color: var(--muted); font-size: 15px; margin-top: 2px; }
+.icon-btn {
+  width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--surface); border: 1px solid var(--line); flex: none;
+}
+.icon-btn:disabled { opacity: .35; cursor: default; }
+.icon-btn svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.icon-btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.navs { display: flex; gap: 8px; }
+.link { color: var(--accent); font-weight: 600; font-size: 15px; }
+
+/* Score strip */
+.scores { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 8px; margin-bottom: 24px; }
+.score { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 12px; min-width: 0; }
+.score .lbl { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
+.score .val { font-size: 28px; font-weight: 700; line-height: 1.15; margin-top: 4px; }
+.score .val small { font-size: 15px; font-weight: 600; color: var(--muted); }
+.score.main .val { font-size: 34px; }
+.meter { height: 6px; border-radius: 3px; background: var(--line); margin-top: 10px; overflow: hidden; }
+.meter i { display: block; height: 100%; background: var(--accent); border-radius: 3px; transition: width .3s ease; }
+.score .note { font-size: 12px; color: var(--muted); margin-top: 8px; }
+
+/* Grouped list */
+.sec-h { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; margin: 0 4px 8px; display: flex; justify-content: space-between; gap: 8px; }
+.group { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); margin-bottom: 24px; overflow: hidden; }
+.row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; min-height: 64px; }
+.row + .row { border-top: 1px solid var(--line); }
+.row .info { flex: 1; min-width: 0; text-align: left; padding-block: 2px; }
+.row .name { font-size: 17px; font-weight: 600; overflow-wrap: anywhere; }
+.row .meta { font-size: 14px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; margin-top: 1px; }
+.row.done .name { color: var(--muted); }
+.check {
+  width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--line); flex: none;
+  display: grid; place-items: center; transition: background .15s, border-color .15s, transform .15s;
+}
+.check svg { width: 18px; height: 18px; stroke: var(--accent-fg); stroke-width: 3; fill: none; stroke-linecap: round; stroke-linejoin: round; opacity: 0; }
+.check[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); }
+.check[aria-pressed="true"] svg { opacity: 1; }
+.check:active { transform: scale(.88); }
+.check.partial { border-color: var(--accent); }
+.chev { color: var(--muted); flex: none; }
+.chev svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+/* Weight pips */
+.weight { display: inline-flex; gap: 2px; align-items: flex-end; height: 12px; }
+.weight b { width: 3px; border-radius: 1px; background: var(--line); }
+.weight b.on { background: var(--fg); }
+.weight b:nth-child(1) { height: 5px; } .weight b:nth-child(2) { height: 7px; } .weight b:nth-child(3) { height: 9px; }
+.weight b:nth-child(4) { height: 11px; } .weight b:nth-child(5) { height: 12px; }
+.tag { font-size: 12px; font-weight: 600; padding: 2px 7px; border-radius: 6px; background: var(--accent-soft); color: var(--accent); }
+
+.empty { text-align: center; color: var(--muted); padding: 32px 16px; }
+.empty b { display: block; color: var(--fg); font-size: 17px; margin-bottom: 4px; }
+.banner { display: flex; gap: 12px; align-items: center; justify-content: space-between; background: var(--accent-soft); border-radius: var(--r); padding: 12px 14px; margin-bottom: 16px; font-size: 14px; }
+.banner .link { white-space: nowrap; }
+
+/* Segmented control */
+.seg { display: flex; background: var(--line); border-radius: 10px; padding: 2px; gap: 2px; }
+.seg button { flex: 1; padding: 7px 4px; border-radius: 8px; font-size: 14px; font-weight: 600; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--fg); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+
+/* Progress */
+.chart-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 16px 14px 10px; margin: 16px 0 24px; }
+.headline { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.headline .big { font-size: 44px; font-weight: 700; line-height: 1; letter-spacing: -0.02em; }
+.headline .period { font-size: 15px; font-weight: 600; }
+.headline .delta { font-size: 14px; color: var(--muted); }
+.delta.up { color: var(--accent); } .delta.down { color: var(--danger); }
+.chart { width: 100%; height: auto; display: block; margin-top: 12px; }
+.chart text { fill: var(--muted); font: 10px var(--font); }
+.chart .grid { stroke: var(--line); stroke-width: 1; }
+.chart .bar { fill: var(--bar-idle); }
+.chart .bar.sel { fill: var(--accent); }
+.chart .hit { fill: transparent; cursor: pointer; }
+.chart text.sel { fill: var(--fg); font-weight: 700; }
+.hint { font-size: 13px; color: var(--muted); margin-top: 6px; }
+.prow { padding: 12px 14px; }
+.prow + .prow { border-top: 1px solid var(--line); }
+.prow .line1 { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+.prow .name { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.prow .pct { font-weight: 700; font-size: 17px; }
+.prow .meta { font-size: 13px; color: var(--muted); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 2px; }
+.prow .meter { margin-top: 8px; height: 4px; }
+
+/* Tab bar */
+.tabs {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+  background: var(--surface); border-top: 1px solid var(--line);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px);
+}
+.tabs .in { max-width: 560px; margin: 0 auto; display: flex; }
+.tabs button { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 0 6px; font-size: 11px; font-weight: 600; color: var(--muted); }
+.tabs button svg { width: 24px; height: 24px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.tabs button[aria-selected="true"] { color: var(--accent); }
+
+/* Sheet */
+.scrim { position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 40; }
+.sheet {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 41; max-height: 92%;
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
+  background: var(--bg); border-radius: 16px 16px 0 0;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 8px calc(24px + env(safe-area-inset-bottom, 0px));
+  animation: up .22s ease-out;
+}
+@keyframes up { from { transform: translateY(24px); opacity: .6; } to { transform: none; opacity: 1; } }
+.sheet .in { max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+.sheet .grab { width: 36px; height: 5px; border-radius: 3px; background: var(--line); margin: 0 auto; }
+.sheet-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.sheet-top h2 { margin: 0; font-size: 17px; }
+.sheet-top .link { padding: 6px 2px; }
+.field { display: flex; flex-direction: column; gap: 8px; }
+.field > label, .field > .lbl { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; padding-left: 4px; }
+.input {
+  width: 100%; font: 17px var(--font); color: var(--fg); background: var(--surface);
+  border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; min-height: 48px;
+  -webkit-appearance: none; appearance: none;
+}
+.input::placeholder { color: var(--muted); }
+.days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.days button { aspect-ratio: 1; max-width: 100%; border-radius: 50%; background: var(--surface); border: 1px solid var(--line); font-weight: 600; font-size: 14px; }
+.days button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.stepper { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 6px; }
+.stepper button { width: 40px; height: 40px; border-radius: 10px; background: var(--bg); font-size: 22px; font-weight: 500; }
+.stepper .v { flex: 1; text-align: center; font-size: 17px; font-weight: 600; }
+.timebox { display: flex; gap: 8px; align-items: center; }
+.timebox .input { flex: 1; }
+.weights { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.weights button { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 0 8px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.weights button .n { font-size: 18px; font-weight: 700; }
+.weights button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.weights button[aria-pressed="true"] .weight b.on { background: var(--accent); }
+.help { font-size: 13px; color: var(--muted); padding-left: 4px; }
+.err { color: var(--danger); font-size: 14px; padding-left: 4px; }
+.btn { width: 100%; min-height: 50px; border-radius: 12px; font-weight: 600; font-size: 17px; }
+.btn.primary { background: var(--accent); color: var(--accent-fg); }
+.btn.danger { color: var(--danger); background: var(--surface); border: 1px solid var(--line); }
+.foot-actions { display: flex; flex-direction: column; gap: 10px; }
+.small-danger { color: var(--danger); font-size: 15px; font-weight: 600; padding: 12px 4px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+@media (max-width: 360px) {
+  .scores { grid-template-columns: 1fr 1fr; }
+  .scores .main { grid-column: 1 / -1; }
+}
+</style>
+</head>
+<body>
+<div class="wrap" id="view"></div>
+
+<nav class="tabs" aria-label="Sections">
+  <div class="in" role="tablist">
+    <button role="tab" data-act="tab" data-tab="today" aria-selected="true">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>Today
+    </button>
+    <button role="tab" data-act="tab" data-tab="progress" aria-selected="false">
+      <svg viewBox="0 0 24 24"><path d="M5 20V12M12 20V5M19 20v-9"/></svg>Progress
+    </button>
+    <button role="tab" data-act="tab" data-tab="habits" aria-selected="false">
+      <svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg>Habits
+    </button>
+  </div>
+</nav>
+
+<div class="scrim" id="scrim" hidden data-act="cancel"></div>
+<div class="sheet" id="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="sheet-title"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- dates ---------- */
+  const pad = n => String(n).padStart(2, '0');
+  const key = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  const parse = k => { const p = k.split('-').map(Number); return new Date(p[0], p[1] - 1, p[2]); };
+  const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+  const addMonths = (d, n) => new Date(d.getFullYear(), d.getMonth() + n, 1);
+  const today = () => { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()); };
+  const weekStart = d => addDays(d, -((d.getDay() + 6) % 7)); // Monday
+  const monthStart = d => new Date(d.getFullYear(), d.getMonth(), 1);
+  const monthEnd = d => new Date(d.getFullYear(), d.getMonth() + 1, 0);
+  const same = (a, b) => a.getTime() === b.getTime();
+  const fmt = (d, o) => d.toLocaleDateString(undefined, o);
+
+  const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
+  const DAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const WEIGHT_NAMES = ['', 'Minor', 'Low', 'Medium', 'High', 'Critical'];
+
+  /* ---------- storage ---------- */
+  const STORE = 'tally.habits.v1';
+  function load() {
+    try {
+      const s = JSON.parse(localStorage.getItem(STORE));
+      if (s && Array.isArray(s.habits) && s.log && typeof s.log === 'object') return s;
+    } catch (e) {}
+    return null;
+  }
+  function save() { try { localStorage.setItem(STORE, JSON.stringify(state)); } catch (e) {} }
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+  function seed() {
+    const t = today();
+    const created = key(addDays(t, -84));
+    const habits = [
+      { id: 'ex1', name: 'Meditate 10 min', freq: 'daily', days: [1, 2, 3, 4, 5], target: 1, time: '07:00', weight: 2, created, example: true },
+      { id: 'ex2', name: 'Drink 2 L of water', freq: 'daily', days: [0, 1, 2, 3, 4, 5, 6], target: 1, time: '', weight: 1, created, example: true },
+      { id: 'ex3', name: 'Go to the gym', freq: 'weekly', days: [], target: 3, time: '18:00', weight: 5, created, example: true },
+      { id: 'ex4', name: 'Read 20 pages', freq: 'daily', days: [0, 1, 2, 3, 4, 5, 6], target: 1, time: '21:30', weight: 3, created, example: true },
+      { id: 'ex5', name: 'Call family', freq: 'monthly', days: [], target: 4, time: '', weight: 3, created, example: true }
+    ];
+    let s = 7;
+    const rnd = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
+    const log = {};
+    for (let i = 84; i >= 1; i--) {
+      const d = addDays(t, -i), k = key(d), wd = d.getDay();
+      const trend = 0.15 * (1 - i / 84); // gets a bit better over time
+      const day = {};
+      if (wd >= 1 && wd <= 5 && rnd() < 0.62 + trend) day.ex1 = true;
+      if (rnd() < 0.8 + trend) day.ex2 = true;
+      if ((wd === 1 || wd === 3 || wd === 5) && rnd() < 0.7 + trend) day.ex3 = true;
+      if (rnd() < 0.55 + trend) day.ex4 = true;
+      if (wd === 0 && rnd() < 0.8) day.ex5 = true;
+      if (Object.keys(day).length) log[k] = day;
+    }
+    log[key(t)] = { ex2: true };
+    return { habits, log, example: true };
+  }
+
+  let state = load() || seed();
+  save();
+
+  /* ---------- logic ---------- */
+  const active = () => state.habits;
+  const isDone = (h, k) => !!(state.log[k] && state.log[k][h.id]);
+  function setDone(h, k, on) {
+    const day = state.log[k] || (state.log[k] = {});
+    if (on) day[h.id] = true; else { delete day[h.id]; if (!Object.keys(day).length) delete state.log[k]; }
+    if (on && k < h.created) h.created = k; // backfilling before creation moves the start date
+    save();
+  }
+  function countIn(h, s, e) {
+    let n = 0;
+    for (let d = s; d <= e; d = addDays(d, 1)) if (isDone(h, key(d))) n++;
+    return n;
+  }
+
+  // Completion rate 0..1 of one habit over [s, e]; null when nothing was expected.
+  // periodic=false skips weekly/monthly habits (used for single days).
+  function habitRate(h, s, e, periodic) {
+    const t = today(), c = parse(h.created);
+    if (e > t) e = t;
+    if (h.freq === 'daily') {
+      let exp = 0, done = 0;
+      for (let d = s < c ? c : s; d <= e; d = addDays(d, 1)) {
+        if (h.days.indexOf(d.getDay()) >= 0) { exp++; if (isDone(h, key(d))) done++; }
+      }
+      return exp ? done / exp : null;
+    }
+    if (!periodic) return null;
+    const rates = [];
+    if (h.freq === 'weekly') {
+      let m = weekStart(s); if (m < s) m = addDays(m, 7);
+      const first = weekStart(c);
+      for (; m <= e; m = addDays(m, 7)) {
+        if (m < first) continue;
+        rates.push(Math.min(1, countIn(h, m, addDays(m, 6)) / h.target));
+      }
+    } else {
+      let m = monthStart(s); if (m < s) m = addMonths(m, 1);
+      const first = monthStart(c);
+      for (; m <= e; m = addMonths(m, 1)) {
+        if (m < first) continue;
+        rates.push(Math.min(1, countIn(h, m, monthEnd(m)) / h.target));
+      }
+    }
+    return rates.length ? rates.reduce((a, b) => a + b, 0) / rates.length : null;
+  }
+  // Weighted score: a missed weight-5 habit costs five times a missed weight-1 habit.
+  function score(s, e, periodic) {
+    let w = 0, sum = 0;
+    for (const h of active()) {
+      const r = habitRate(h, s, e, periodic);
+      if (r === null) continue;
+      w += h.weight; sum += r * h.weight;
+    }
+    return w ? sum / w : null;
+  }
+  function streak(h) {
+    const t = today(), c = parse(h.created);
+    let n = 0;
+    if (h.freq === 'daily') {
+      if (!h.days.length) return '';
+      let d = t;
+      if (!isDone(h, key(d))) d = addDays(d, -1);
+      for (let g = 0; d >= c && g < 4000; g++, d = addDays(d, -1)) {
+        if (h.days.indexOf(d.getDay()) < 0) continue;
+        if (isDone(h, key(d))) n++; else break;
+      }
+      return n ? n + (n === 1 ? ' day' : ' days') + ' in a row' : '';
+    }
+    if (h.freq === 'weekly') {
+      let w = weekStart(t);
+      if (countIn(h, w, addDays(w, 6)) < h.target) w = addDays(w, -7);
+      for (const f = weekStart(c); w >= f && countIn(h, w, addDays(w, 6)) >= h.target; w = addDays(w, -7)) n++;
+      return n ? n + (n === 1 ? ' week' : ' weeks') + ' in a row' : '';
+    }
+    let m = monthStart(t);
+    if (countIn(h, m, monthEnd(m)) < h.target) m = addMonths(m, -1);
+    for (const f = monthStart(c); m >= f && countIn(h, m, monthEnd(m)) >= h.target; m = addMonths(m, -1)) n++;
+    return n ? n + (n === 1 ? ' month' : ' months') + ' in a row' : '';
+  }
+  function schedule(h) {
+    if (h.freq === 'weekly') return h.target + '× a week';
+    if (h.freq === 'monthly') return h.target + '× a month';
+    const d = h.days.slice().sort().join('');
+    if (h.days.length === 7) return 'Every day';
+    if (d === '12345') return 'Weekdays';
+    if (d === '06') return 'Weekends';
+    return DAY_ORDER.filter(x => h.days.indexOf(x) >= 0).map(x => DAY_SHORT[x]).join(', ');
+  }
+  function fmtTime(t) {
+    if (!t) return '';
+    const p = t.split(':').map(Number);
+    return new Date(2000, 0, 1, p[0], p[1]).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  }
+  const pct = v => v === null ? '–' : Math.round(v * 100);
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const byTime = (a, b) => (a.time || '99') < (b.time || '99') ? -1 : (a.time || '99') > (b.time || '99') ? 1 : b.weight - a.weight;
+  const weightPips = w => '<span class="weight" title="Weight ' + w + ' of 5" aria-label="Weight ' + w + ' of 5">' +
+    [1, 2, 3, 4, 5].map(i => '<b class="' + (i <= w ? 'on' : '') + '"></b>').join('') + '</span>';
+
+  const ICON = {
+    check: '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+    left: '<svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>',
+    right: '<svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>',
+    plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
+    chev: '<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>'
+  };
+
+  /* ---------- ui state ---------- */
+  const ui = { tab: 'today', date: today(), mode: 'days', sel: null, draft: null };
+  const view = document.getElementById('view');
+
+  function render() {
+    document.querySelectorAll('.tabs button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === ui.tab)));
+    if (ui.tab === 'today') renderToday();
+    else if (ui.tab === 'progress') renderProgress();
+    else renderHabits();
+  }
+
+  function exampleBanner() {
+    return state.example && state.habits.some(h => h.example)
+      ? '<div class="banner"><span>You are looking at example habits with sample history.</span><button class="link" data-act="clear-examples">Remove examples</button></div>'
+      : '';
+  }
+
+  /* Today */
+  function renderToday() {
+    const t = today(), d = ui.date, k = key(d), isToday = same(d, t);
+    const dayS = score(d, d, false);
+    const ws = weekStart(d), ms = monthStart(d);
+    const weekS = score(ws, addDays(ws, 6), true);
+    const monthS = score(ms, monthEnd(ms), true);
+    const daily = active().filter(h => h.freq === 'daily' && h.days.indexOf(d.getDay()) >= 0).sort(byTime);
+    const weekly = active().filter(h => h.freq === 'weekly').sort(byTime);
+    const monthly = active().filter(h => h.freq === 'monthly').sort(byTime);
+    const doneDaily = daily.filter(h => isDone(h, k)).length;
+
+    let html = '<header class="top"><div><h1>' + (isToday ? 'Today' : esc(fmt(d, { weekday: 'long' }))) + '</h1>' +
+      '<div class="sub">' + esc(fmt(d, { weekday: isToday ? 'long' : undefined, month: 'long', day: 'numeric' })) +
+      (isToday ? '' : ' · <button class="link" data-act="go-today">Back to today</button>') + '</div></div>' +
+      '<div class="navs"><button class="icon-btn" data-act="prev" aria-label="Previous day">' + ICON.left + '</button>' +
+      '<button class="icon-btn" data-act="next" aria-label="Next day"' + (isToday ? ' disabled' : '') + '>' + ICON.right + '</button>' +
+      '<button class="icon-btn primary" data-act="new" aria-label="New habit">' + ICON.plus + '</button></div></header>';
+
+    html += exampleBanner();
+
+    if (!state.habits.length) {
+      view.innerHTML = html + '<div class="group"><div class="empty"><b>No habits yet</b>Add your first habit and give it a weight, so the important ones count more.<br><br><button class="btn primary" data-act="new">New habit</button></div></div>';
+      return;
+    }
+
+    html += '<div class="scores">' +
+      '<div class="score main"><div class="lbl">Day</div><div class="val num">' + pct(dayS) + (dayS === null ? '' : '<small>%</small>') + '</div>' +
+      '<div class="meter"><i style="width:' + (dayS === null ? 0 : Math.round(dayS * 100)) + '%"></i></div>' +
+      '<div class="note">' + (daily.length ? doneDaily + ' of ' + daily.length + ' daily done' : 'No daily habits') + '</div></div>' +
+      '<div class="score"><div class="lbl">Week</div><div class="val num">' + pct(weekS) + (weekS === null ? '' : '<small>%</small>') + '</div><div class="meter"><i style="width:' + (weekS === null ? 0 : Math.round(weekS * 100)) + '%"></i></div></div>' +
+      '<div class="score"><div class="lbl">Month</div><div class="val num">' + pct(monthS) + (monthS === null ? '' : '<small>%</small>') + '</div><div class="meter"><i style="width:' + (monthS === null ? 0 : Math.round(monthS * 100)) + '%"></i></div></div>' +
+      '</div>';
+
+    const row = (h, extra, met) => {
+      const on = isDone(h, k);
+      const meta = [];
+      if (h.time) meta.push('<span class="num">' + esc(fmtTime(h.time)) + '</span>');
+      meta.push(weightPips(h.weight));
+      if (extra) meta.push(extra);
+      return '<div class="row' + (on ? ' done' : '') + '">' +
+        '<button class="check' + (!on && met ? ' partial' : '') + '" data-act="toggle" data-id="' + h.id + '" aria-pressed="' + on + '" aria-label="' + (on ? 'Mark not done: ' : 'Mark done: ') + esc(h.name) + '">' + ICON.check + '</button>' +
+        '<button class="info" data-act="edit" data-id="' + h.id + '"><div class="name">' + esc(h.name) + '</div><div class="meta">' + meta.join('') + '</div></button>' +
+        '<span class="chev">' + ICON.chev + '</span></div>';
+    };
+
+    if (daily.length) html += '<div class="sec-h"><span>Daily</span><span class="num">' + doneDaily + '/' + daily.length + '</span></div><div class="group">' + daily.map(h => row(h)).join('') + '</div>';
+    if (weekly.length) {
+      html += '<div class="sec-h"><span>This week</span><span>' + esc(fmt(ws, { month: 'short', day: 'numeric' })) + ' – ' + esc(fmt(addDays(ws, 6), { month: 'short', day: 'numeric' })) + '</span></div><div class="group">' +
+        weekly.map(h => { const c = countIn(h, ws, addDays(ws, 6)); return row(h, c >= h.target ? '<span class="tag">Goal met · ' + c + '/' + h.target + '</span>' : '<span class="num">' + c + ' of ' + h.target + ' this week</span>', c >= h.target); }).join('') + '</div>';
+    }
+    if (monthly.length) {
+      html += '<div class="sec-h"><span>This month</span><span>' + esc(fmt(ms, { month: 'long' })) + '</span></div><div class="group">' +
+        monthly.map(h => { const c = countIn(h, ms, monthEnd(ms)); return row(h, c >= h.target ? '<span class="tag">Goal met · ' + c + '/' + h.target + '</span>' : '<span class="num">' + c + ' of ' + h.target + ' this month</span>', c >= h.target); }).join('') + '</div>';
+    }
+    if (!daily.length && !weekly.length && !monthly.length) html += '<div class="group"><div class="empty"><b>Nothing scheduled</b>No habits fall on this day.</div></div>';
+    if (!isToday) html += '<p class="help">You are editing ' + esc(fmt(d, { weekday: 'long', month: 'long', day: 'numeric' })) + '. Checks here are saved to that day.</p>';
+    view.innerHTML = html;
+  }
+
+  /* Progress */
+  function periods() {
+    const t = today(), out = [];
+    if (ui.mode === 'days') {
+      for (let i = 13; i >= 0; i--) {
+        const d = addDays(t, -i);
+        out.push({ s: d, e: d, periodic: false, label: fmt(d, { weekday: 'narrow' }), name: i === 0 ? 'Today' : i === 1 ? 'Yesterday' : fmt(d, { weekday: 'short', month: 'short', day: 'numeric' }) });
+      }
+    } else if (ui.mode === 'weeks') {
+      const w0 = weekStart(t);
+      for (let i = 11; i >= 0; i--) {
+        const s = addDays(w0, -7 * i);
+        out.push({ s, e: addDays(s, 6), periodic: true, label: i % 2 ? '' : fmt(s, { month: 'numeric', day: 'numeric' }), name: i === 0 ? 'This week' : i === 1 ? 'Last week' : 'Week of ' + fmt(s, { month: 'short', day: 'numeric' }) });
+      }
+    } else {
+      const m0 = monthStart(t);
+      for (let i = 11; i >= 0; i--) {
+        const s = addMonths(m0, -i);
+        out.push({ s, e: monthEnd(s), periodic: true, label: fmt(s, { month: 'narrow' }), name: i === 0 ? 'This month' : fmt(s, { month: 'long', year: 'numeric' }) });
+      }
+    }
+    out.forEach(p => { p.v = score(p.s, p.e, p.periodic); });
+    return out;
+  }
+
+  function chartSVG(ps, sel) {
+    const W = 344, H = 160, L = 34, R = 4, T = 8, B = 20;
+    const cw = W - L - R, ch = H - T - B, n = ps.length, slot = cw / n, bw = Math.min(18, slot * 0.62);
+    const y = v => T + ch - v * ch;
+    let g = '';
+    [0, 0.5, 1].forEach(v => {
+      g += '<line class="grid" x1="' + L + '" x2="' + (W - R) + '" y1="' + y(v) + '" y2="' + y(v) + '"/>' +
+        '<text x="' + (L - 6) + '" y="' + (y(v) + 3.5) + '" text-anchor="end">' + (v * 100) + '%</text>';
+    });
+    ps.forEach((p, i) => {
+      const cx = L + slot * i + slot / 2, x = cx - bw / 2;
+      const v = p.v === null ? 0 : p.v, h = Math.max(p.v === null ? 0 : 2, v * ch);
+      g += '<rect class="bar' + (i === sel ? ' sel' : '') + '" x="' + x.toFixed(1) + '" y="' + (T + ch - h).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + h.toFixed(1) + '" rx="3"/>';
+      if (p.label) g += '<text x="' + cx.toFixed(1) + '" y="' + (H - 5) + '" text-anchor="middle"' + (i === sel ? ' class="sel"' : '') + '>' + esc(p.label) + '</text>';
+      g += '<rect class="hit" data-act="bar" data-i="' + i + '" x="' + (L + slot * i).toFixed(1) + '" y="0" width="' + slot.toFixed(1) + '" height="' + H + '"><title>' + esc(p.name) + ': ' + pct(p.v) + (p.v === null ? '' : '%') + '</title></rect>';
+    });
+    return '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Weighted score per period">' + g + '</svg>';
+  }
+
+  function renderProgress() {
+    const ps = periods();
+    const sel = ui.sel === null || ui.sel >= ps.length ? ps.length - 1 : ui.sel;
+    const cur = ps[sel], prev = sel > 0 ? ps[sel - 1] : null;
+    let delta = '';
+    if (cur.v !== null && prev && prev.v !== null) {
+      const dlt = Math.round(cur.v * 100) - Math.round(prev.v * 100);
+      const unit = ui.mode === 'days' ? 'day' : ui.mode === 'weeks' ? 'week' : 'month';
+      delta = '<span class="delta ' + (dlt > 0 ? 'up' : dlt < 0 ? 'down' : '') + ' num">' + (dlt > 0 ? '+' : '') + dlt + ' pts vs previous ' + unit + '</span>';
+    }
+    let html = '<header class="top"><div><h1>Progress</h1><div class="sub">Weighted by how much each habit matters</div></div></header>';
+    html += '<div class="seg" role="group" aria-label="Range">' +
+      [['days', 'Days'], ['weeks', 'Weeks'], ['months', 'Months']].map(m => '<button data-act="mode" data-mode="' + m[0] + '" aria-pressed="' + (ui.mode === m[0]) + '">' + m[1] + '</button>').join('') + '</div>';
+
+    if (!state.habits.length) {
+      view.innerHTML = html + '<div class="group" style="margin-top:16px"><div class="empty"><b>No data yet</b>Add a habit and check it off to see your progress here.</div></div>';
+      return;
+    }
+
+    html += '<div class="chart-card"><div class="headline"><div><div class="period">' + esc(cur.name) + '</div>' + delta + '</div>' +
+      '<div class="big num">' + pct(cur.v) + (cur.v === null ? '' : '<span style="font-size:22px">%</span>') + '</div></div>' +
+      chartSVG(ps, sel) +
+      '<div class="hint">' + (ui.mode === 'days' ? 'Day bars count daily habits. Weekly and monthly goals show in Weeks and Months.' : 'Tap a bar to see that period.') + '</div></div>';
+
+    const s = ps[0].s, t = today();
+    const rows = active().map(h => ({ h, r: habitRate(h, s, t, true), st: streak(h) }))
+      .sort((a, b) => b.h.weight - a.h.weight || (b.r || 0) - (a.r || 0));
+    const span = ui.mode === 'days' ? 'last 14 days' : ui.mode === 'weeks' ? 'last 12 weeks' : 'last 12 months';
+    html += '<div class="sec-h"><span>By habit</span><span>' + span + '</span></div><div class="group">' +
+      rows.map(o => '<div class="prow"><div class="line1"><span class="name">' + esc(o.h.name) + '</span><span class="pct num">' + pct(o.r) + (o.r === null ? '' : '%') + '</span></div>' +
+        '<div class="meta">' + weightPips(o.h.weight) + '<span>' + esc(schedule(o.h)) + '</span>' + (o.st ? '<span class="tag">' + esc(o.st) + '</span>' : '') + '</div>' +
+        '<div class="meter"><i style="width:' + (o.r === null ? 0 : Math.round(o.r * 100)) + '%"></i></div></div>').join('') + '</div>';
+    view.innerHTML = html;
+  }
+
+  /* Habits */
+  function renderHabits() {
+    let html = '<header class="top"><div><h1>Habits</h1><div class="sub">' + state.habits.length + (state.habits.length === 1 ? ' habit' : ' habits') + '</div></div>' +
+      '<button class="icon-btn primary" data-act="new" aria-label="New habit">' + ICON.plus + '</button></header>';
+    html += exampleBanner();
+    if (!state.habits.length) {
+      html += '<div class="group"><div class="empty"><b>No habits yet</b>Tap + to add one.</div></div>';
+    } else {
+      const order = { daily: 0, weekly: 1, monthly: 2 };
+      const list = state.habits.slice().sort((a, b) => order[a.freq] - order[b.freq] || byTime(a, b));
+      html += '<div class="group">' + list.map(h => '<button class="row" style="width:100%" data-act="edit" data-id="' + h.id + '">' +
+        '<div class="info"><div class="name">' + esc(h.name) + '</div><div class="meta"><span>' + esc(schedule(h)) + (h.time ? ' · <span class="num">' + esc(fmtTime(h.time)) + '</span>' : '') + '</span>' +
+        weightPips(h.weight) + '<span>' + WEIGHT_NAMES[h.weight] + '</span></div></div><span class="chev">' + ICON.chev + '</span></button>').join('') + '</div>';
+    }
+    html += '<button class="small-danger" data-act="reset" data-confirm="Tap again to erase everything">Erase all data</button>';
+    view.innerHTML = html;
+  }
+
+  /* ---------- sheet (create / edit) ---------- */
+  const sheet = document.getElementById('sheet'), scrim = document.getElementById('scrim');
+
+  function openSheet(h) {
+    ui.draft = h
+      ? { id: h.id, name: h.name, freq: h.freq, days: h.days.slice(), target: h.target, time: h.time, weight: h.weight, isNew: false, err: '' }
+      : { id: null, name: '', freq: 'daily', days: [0, 1, 2, 3, 4, 5, 6], target: 3, time: '', weight: 3, isNew: true, err: '' };
+    renderSheet();
+    sheet.hidden = false; scrim.hidden = false;
+    document.body.style.overflow = 'hidden';
+    if (!h) setTimeout(() => { const i = document.getElementById('f-name'); if (i) i.focus(); }, 60);
+  }
+  function closeSheet() {
+    sheet.hidden = true; scrim.hidden = true; ui.draft = null;
+    document.body.style.overflow = '';
+  }
+  function syncInputs() {
+    const n = document.getElementById('f-name'), t = document.getElementById('f-time');
+    if (n) ui.draft.name = n.value;
+    if (t) ui.draft.time = t.value;
+  }
+  function renderSheet() {
+    const d = ui.draft;
+    const maxT = d.freq === 'weekly' ? 7 : 31;
+    if (d.target > maxT) d.target = maxT;
+    sheet.innerHTML = '<div class="in"><div class="grab"></div>' +
+      '<div class="sheet-top"><button class="link" data-act="cancel">Cancel</button><h2 id="sheet-title">' + (d.isNew ? 'New habit' : 'Edit habit') + '</h2><button class="link" data-act="save">Save</button></div>' +
+      '<div class="field"><label for="f-name">Name</label><input class="input" id="f-name" maxlength="60" autocomplete="off" placeholder="e.g. Drink water" value="' + esc(d.name) + '"></div>' +
+      '<div class="field"><span class="lbl">Repeat</span><div class="seg">' +
+      [['daily', 'Daily'], ['weekly', 'Weekly'], ['monthly', 'Monthly']].map(f => '<button data-act="freq" data-v="' + f[0] + '" aria-pressed="' + (d.freq === f[0]) + '">' + f[1] + '</button>').join('') + '</div>' +
+      (d.freq === 'daily'
+        ? '<div class="days" role="group" aria-label="Days">' + DAY_ORDER.map(x => '<button data-act="day" data-v="' + x + '" aria-pressed="' + (d.days.indexOf(x) >= 0) + '" aria-label="' + DAY_SHORT[x] + '">' + DAY_SHORT[x].charAt(0) + '</button>').join('') + '</div>'
+        : '<div class="stepper"><button data-act="tgt" data-v="-1" aria-label="Fewer">−</button><div class="v num">' + d.target + '× a ' + (d.freq === 'weekly' ? 'week' : 'month') + '</div><button data-act="tgt" data-v="1" aria-label="More">+</button></div>') +
+      '</div>' +
+      '<div class="field"><label for="f-time">Time <span style="text-transform:none;letter-spacing:0;font-weight:400">(optional)</span></label><div class="timebox"><input class="input" type="time" id="f-time" value="' + esc(d.time) + '">' +
+      '<button class="link" data-act="time-clear"' + (d.time ? '' : ' hidden') + ' id="time-clear">Clear</button></div></div>' +
+      '<div class="field"><span class="lbl">Weight</span><div class="weights" role="group" aria-label="Weight">' +
+      [1, 2, 3, 4, 5].map(w => '<button data-act="weight" data-v="' + w + '" aria-pressed="' + (d.weight === w) + '"><span class="n num">' + w + '</span>' + weightPips(w) + '</button>').join('') + '</div>' +
+      '<div class="help"><b>' + WEIGHT_NAMES[d.weight] + '.</b> Missing a weight-5 habit lowers your score five times more than missing a weight-1 habit.</div></div>' +
+      (d.err ? '<div class="err" role="alert">' + esc(d.err) + '</div>' : '') +
+      '<div class="foot-actions"><button class="btn primary" data-act="save">' + (d.isNew ? 'Add habit' : 'Save changes') + '</button>' +
+      (d.isNew ? '' : '<button class="btn danger" data-act="delete" data-confirm="Tap again to delete">Delete habit</button>') + '</div></div>';
+  }
+  function saveDraft() {
+    syncInputs();
+    const d = ui.draft;
+    d.name = d.name.trim();
+    if (!d.name) { d.err = 'Give the habit a name.'; renderSheet(); return; }
+    if (d.freq === 'daily' && !d.days.length) { d.err = 'Pick at least one day.'; renderSheet(); return; }
+    const data = { name: d.name, freq: d.freq, days: d.freq === 'daily' ? d.days.slice().sort() : [], target: d.freq === 'daily' ? 1 : d.target, time: d.time || '', weight: d.weight };
+    if (d.isNew) state.habits.push(Object.assign({ id: uid(), created: key(today()) }, data));
+    else Object.assign(state.habits.find(h => h.id === d.id), data);
+    save(); closeSheet(); render();
+  }
+
+  function armed(el) {
+    if (el.dataset.armed) return true;
+    el.dataset.armed = '1';
+    const old = el.textContent;
+    el.textContent = el.dataset.confirm;
+    setTimeout(() => { if (el.isConnected) { delete el.dataset.armed; el.textContent = old; } }, 3000);
+    return false;
+  }
+
+  /* ---------- events ---------- */
+  document.addEventListener('click', e => {
+    const el = e.target.closest('[data-act]');
+    if (!el || el.disabled) return;
+    const a = el.dataset.act;
+    const find = () => state.habits.find(h => h.id === el.dataset.id);
+    switch (a) {
+      case 'tab': ui.tab = el.dataset.tab; if (ui.tab === 'today') ui.date = today(); window.scrollTo(0, 0); render(); break;
+      case 'prev': ui.date = addDays(ui.date, -1); render(); break;
+      case 'next': if (ui.date < today()) ui.date = addDays(ui.date, 1); render(); break;
+      case 'go-today': ui.date = today(); render(); break;
+      case 'toggle': { const h = find(); if (h) { const k = key(ui.date); setDone(h, k, !isDone(h, k)); render(); } break; }
+      case 'edit': { const h = find(); if (h) openSheet(h); break; }
+      case 'new': openSheet(null); break;
+      case 'mode': ui.mode = el.dataset.mode; ui.sel = null; render(); break;
+      case 'bar': ui.sel = Number(el.dataset.i); render(); break;
+      case 'clear-examples': {
+        const ids = state.habits.filter(h => h.example).map(h => h.id);
+        state.habits = state.habits.filter(h => !h.example);
+        Object.keys(state.log).forEach(k => { ids.forEach(id => delete state.log[k][id]); if (!Object.keys(state.log[k]).length) delete state.log[k]; });
+        state.example = false; save(); render(); break;
+      }
+      case 'reset': if (armed(el)) { state = { habits: [], log: {}, example: false }; save(); render(); } break;
+      case 'cancel': closeSheet(); break;
+      case 'freq': syncInputs(); ui.draft.freq = el.dataset.v; ui.draft.err = ''; if (ui.draft.freq !== 'daily' && ui.draft.target < 1) ui.draft.target = 1; renderSheet(); break;
+      case 'day': { syncInputs(); const v = Number(el.dataset.v), ds = ui.draft.days, i = ds.indexOf(v); if (i >= 0) ds.splice(i, 1); else ds.push(v); ui.draft.err = ''; renderSheet(); break; }
+      case 'tgt': { syncInputs(); const max = ui.draft.freq === 'weekly' ? 7 : 31; ui.draft.target = Math.max(1, Math.min(max, ui.draft.target + Number(el.dataset.v))); renderSheet(); break; }
+      case 'weight': syncInputs(); ui.draft.weight = Number(el.dataset.v); renderSheet(); break;
+      case 'time-clear': syncInputs(); ui.draft.time = ''; renderSheet(); break;
+      case 'save': saveDraft(); break;
+      case 'delete':
+        if (armed(el)) {
+          const id = ui.draft.id;
+          state.habits = state.habits.filter(h => h.id !== id);
+          Object.keys(state.log).forEach(k => { delete state.log[k][id]; if (!Object.keys(state.log[k]).length) delete state.log[k]; });
+          save(); closeSheet(); render();
+        }
+        break;
+    }
+  });
+  sheet.addEventListener('input', e => {
+    if (e.target.id === 'f-time') { const c = document.getElementById('time-clear'); if (c) c.hidden = !e.target.value; }
+  });
+  sheet.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'f-name') { e.preventDefault(); saveDraft(); } });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && ui.draft) closeSheet(); });
+
+  // Roll over to the new day when the app comes back from the background.
+  let lastDay = key(today());
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    const k = key(today());
+    if (k !== lastDay) { if (key(ui.date) === lastDay) ui.date = today(); lastDay = k; if (!ui.draft) render(); }
+  });
+
+  try {
+    if (window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches) document.documentElement.classList.add('standalone');
+  } catch (e) {}
+  try {
+    if ('serviceWorker' in navigator && location.protocol === 'https:' && window.self === window.top) {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    }
+  } catch (e) {}
+
+  render();
+})();
+</script>
+</body>
+</html>
