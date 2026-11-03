@@ -25,6 +25,7 @@
   --accent-soft: #DDE9E2;
   --accent-fg: #FFFFFF;
   --danger: #B4441F;
+  --danger-soft: #F6E4DB;
   --bar-idle: #C9D6CE;
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, system-ui, sans-serif;
   --font-num: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
@@ -33,13 +34,13 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0F1110; --surface: #1A1D1B; --fg: #ECEFEC; --muted: #959C97; --line: #2A2F2C;
-    --accent: #72C49A; --accent-soft: #1E3328; --accent-fg: #0C130F; --danger: #E5875E; --bar-idle: #33463B;
+    --accent: #72C49A; --accent-soft: #1E3328; --accent-fg: #0C130F; --danger: #E5875E; --danger-soft: #3A231A; --bar-idle: #33463B;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0F1110; --surface: #1A1D1B; --fg: #ECEFEC; --muted: #959C97; --line: #2A2F2C;
-  --accent: #72C49A; --accent-soft: #1E3328; --accent-fg: #0C130F; --danger: #E5875E; --bar-idle: #33463B;
+  --accent: #72C49A; --accent-soft: #1E3328; --accent-fg: #0C130F; --danger: #E5875E; --danger-soft: #3A231A; --bar-idle: #33463B;
   color-scheme: dark;
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -116,6 +117,30 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 .weight b:nth-child(1) { height: 5px; } .weight b:nth-child(2) { height: 7px; } .weight b:nth-child(3) { height: 9px; }
 .weight b:nth-child(4) { height: 11px; } .weight b:nth-child(5) { height: 12px; }
 .tag { font-size: 12px; font-weight: 600; padding: 2px 7px; border-radius: 6px; background: var(--accent-soft); color: var(--accent); }
+.tag.late { background: var(--danger-soft); color: var(--danger); }
+.mini { font-size: 13px; font-weight: 600; color: var(--accent); padding: 2px 0; }
+.check.late { border-color: var(--danger); }
+.check.late[aria-pressed="true"] { background: var(--danger); border-color: var(--danger); }
+.row .info { cursor: pointer; }
+
+/* Timer */
+.tbtn {
+  flex: none; display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px;
+  border-radius: 18px; background: var(--accent-soft); color: var(--accent); font-weight: 600; font-size: 14px;
+}
+.tbtn svg { width: 12px; height: 12px; fill: currentColor; }
+.tbtn.on { background: var(--accent); color: var(--accent-fg); }
+.tbtn .live { min-width: 3.2em; text-align: left; }
+#timerbar {
+  display: flex; align-items: center; gap: 12px; max-width: 560px; margin: 0 auto;
+  padding: 10px 16px; border-bottom: 1px solid var(--line);
+}
+#timerbar[hidden] { display: none; }
+.tb-info { flex: 1; min-width: 0; }
+.tb-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tb-goal { font-size: 13px; color: var(--muted); }
+.tb-time { font-size: 22px; font-weight: 700; }
+body.timing .wrap { padding-bottom: calc(160px + env(safe-area-inset-bottom, 0px)); }
 
 .empty { text-align: center; color: var(--muted); padding: 32px 16px; }
 .empty b { display: block; color: var(--fg); font-size: 17px; margin-bottom: 4px; }
@@ -158,9 +183,9 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
   padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px);
 }
 .tabs .in { max-width: 560px; margin: 0 auto; display: flex; }
-.tabs button { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 0 6px; font-size: 11px; font-weight: 600; color: var(--muted); }
-.tabs button svg { width: 24px; height: 24px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.tabs button[aria-selected="true"] { color: var(--accent); }
+.tabs .in button { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 0 6px; font-size: 11px; font-weight: 600; color: var(--muted); }
+.tabs .in button svg { width: 24px; height: 24px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.tabs .in button[aria-selected="true"] { color: var(--accent); }
 
 /* Sheet */
 .scrim { position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 40; }
@@ -221,6 +246,11 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 <div class="wrap" id="view"></div>
 
 <nav class="tabs" aria-label="Sections">
+  <div id="timerbar" hidden role="timer">
+    <div class="tb-info"><div class="tb-name"></div><div class="tb-goal"></div></div>
+    <div class="tb-time num"></div>
+    <button class="tbtn on" data-act="timer-stop"><svg viewBox="0 0 12 12"><rect x="1" y="1" width="10" height="10" rx="2"/></svg>Stop</button>
+  </div>
   <div class="in" role="tablist">
     <button role="tab" data-act="tab" data-tab="today" aria-selected="true">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>Today
@@ -273,12 +303,14 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
   function seed() {
     const t = today();
     const created = key(addDays(t, -84));
+    const all = [0, 1, 2, 3, 4, 5, 6];
     const habits = [
-      { id: 'ex1', name: 'Meditate 10 min', freq: 'daily', days: [1, 2, 3, 4, 5], target: 1, time: '07:00', weight: 2, created, example: true },
-      { id: 'ex2', name: 'Drink 2 L of water', freq: 'daily', days: [0, 1, 2, 3, 4, 5, 6], target: 1, time: '', weight: 1, created, example: true },
-      { id: 'ex3', name: 'Go to the gym', freq: 'weekly', days: [], target: 3, time: '18:00', weight: 5, created, example: true },
-      { id: 'ex4', name: 'Read 20 pages', freq: 'daily', days: [0, 1, 2, 3, 4, 5, 6], target: 1, time: '21:30', weight: 3, created, example: true },
-      { id: 'ex5', name: 'Call family', freq: 'monthly', days: [], target: 4, time: '', weight: 3, created, example: true }
+      { id: 'ex0', name: 'Wake up', freq: 'daily', days: all, target: 1, time: '09:30', timeMode: 'by', minutes: 0, weight: 4, created, example: true },
+      { id: 'ex1', name: 'Meditate', freq: 'daily', days: [1, 2, 3, 4, 5], target: 1, time: '07:00', timeMode: 'at', minutes: 10, weight: 2, created, example: true },
+      { id: 'ex2', name: 'Drink 2 L of water', freq: 'daily', days: all, target: 1, time: '', timeMode: 'none', minutes: 0, weight: 1, created, example: true },
+      { id: 'ex3', name: 'Go to the gym', freq: 'weekly', days: [], target: 3, time: '18:00', timeMode: 'at', minutes: 0, weight: 5, created, example: true },
+      { id: 'ex4', name: 'Read', freq: 'daily', days: all, target: 1, time: '21:30', timeMode: 'at', minutes: 30, weight: 3, created, example: true },
+      { id: 'ex5', name: 'Call family', freq: 'monthly', days: [], target: 4, time: '', timeMode: 'none', minutes: 0, weight: 3, created, example: true }
     ];
     let s = 7;
     const rnd = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
@@ -287,33 +319,148 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
       const d = addDays(t, -i), k = key(d), wd = d.getDay();
       const trend = 0.15 * (1 - i / 84); // gets a bit better over time
       const day = {};
-      if (wd >= 1 && wd <= 5 && rnd() < 0.62 + trend) day.ex1 = true;
-      if (rnd() < 0.8 + trend) day.ex2 = true;
-      if ((wd === 1 || wd === 3 || wd === 5) && rnd() < 0.7 + trend) day.ex3 = true;
-      if (rnd() < 0.55 + trend) day.ex4 = true;
-      if (wd === 0 && rnd() < 0.8) day.ex5 = true;
+      if (rnd() < 0.9) { const late = rnd() < 0.3 - trend; day.ex0 = { d: 1, late, at: late ? '09:' + (40 + Math.floor(rnd() * 19)) : '0' + (8 + Math.floor(rnd() * 2)) + ':' + (10 + Math.floor(rnd() * 19)) }; }
+      if (wd >= 1 && wd <= 5 && rnd() < 0.62 + trend) day.ex1 = { d: 1, m: 10 + Math.round(rnd() * 4) };
+      if (rnd() < 0.8 + trend) day.ex2 = { d: 1 };
+      if ((wd === 1 || wd === 3 || wd === 5) && rnd() < 0.7 + trend) day.ex3 = { d: 1 };
+      const r = rnd();
+      if (r < 0.55 + trend) day.ex4 = { d: 1, m: 30 + Math.round(rnd() * 15) };
+      else if (r < 0.75) day.ex4 = { m: 8 + Math.round(rnd() * 15) };
+      if (wd === 0 && rnd() < 0.8) day.ex5 = { d: 1 };
       if (Object.keys(day).length) log[k] = day;
     }
-    log[key(t)] = { ex2: true };
-    return { habits, log, example: true };
+    log[key(t)] = { ex2: { d: 1 }, ex4: { m: 12 } };
+    return { habits, log, example: true, timer: null };
   }
 
   let state = load() || seed();
+  state.habits.forEach(h => {
+    if (!h.timeMode) h.timeMode = h.time ? 'at' : 'none';
+    if (h.minutes == null) h.minutes = 0;
+  });
+  if (state.timer === undefined) state.timer = null;
   save();
 
   /* ---------- logic ---------- */
+  // A log entry is { d: 1 if done, late: true if done after the deadline, at: 'HH:MM' when checked, m: minutes timed }.
+  // Older data stored plain `true` for done.
+  const LATE_CREDIT = 0.5;
   const active = () => state.habits;
-  const isDone = (h, k) => !!(state.log[k] && state.log[k][h.id]);
-  function setDone(h, k, on) {
+  const nowHM = () => { const n = new Date(); return pad(n.getHours()) + ':' + pad(n.getMinutes()); };
+  function entry(h, k) {
+    const v = state.log[k] && state.log[k][h.id];
+    if (!v) return null;
+    return v === true ? { d: 1 } : v;
+  }
+  const isDone = (h, k) => { const e = entry(h, k); return !!(e && e.d); };
+  // How much one day counts toward the score: late = half, a started timer = its share of the goal.
+  function credit(h, k) {
+    const e = entry(h, k);
+    if (!e) return 0;
+    if (e.d) return e.late ? LATE_CREDIT : 1;
+    if (h.minutes && e.m) return Math.min(0.99, e.m / h.minutes);
+    return 0;
+  }
+  function putEntry(h, k, e) {
     const day = state.log[k] || (state.log[k] = {});
-    if (on) day[h.id] = true; else { delete day[h.id]; if (!Object.keys(day).length) delete state.log[k]; }
-    if (on && k < h.created) h.created = k; // backfilling before creation moves the start date
+    if (e && (e.d || e.m)) day[h.id] = e; else delete day[h.id];
+    if (!Object.keys(day).length) delete state.log[k];
+    if (e && k < h.created) h.created = k; // backfilling before creation moves the start date
     save();
+  }
+  const lateIfNow = (h, k) => h.timeMode === 'by' && !!h.time && k === key(today()) && nowHM() > h.time;
+  function markDone(h, k) {
+    const e = Object.assign({}, entry(h, k) || {});
+    e.d = 1;
+    if (k === key(today())) e.at = nowHM(); else delete e.at;
+    e.late = lateIfNow(h, k);
+    putEntry(h, k, e);
   }
   function countIn(h, s, e) {
     let n = 0;
     for (let d = s; d <= e; d = addDays(d, 1)) if (isDone(h, key(d))) n++;
     return n;
+  }
+  function creditIn(h, s, e) {
+    let n = 0;
+    for (let d = s; d <= e; d = addDays(d, 1)) n += credit(h, key(d));
+    return n;
+  }
+  function statsIn(h, s, e) {
+    let late = 0, mins = 0;
+    for (let d = s; d <= e; d = addDays(d, 1)) {
+      const x = entry(h, key(d));
+      if (x) { if (x.d && x.late) late++; if (x.m) mins += x.m; }
+    }
+    return { late, mins };
+  }
+
+  /* ---------- timer ---------- */
+  let actx = null;
+  function unlockAudio() {
+    try {
+      const C = window.AudioContext || window.webkitAudioContext;
+      if (!actx && C) actx = new C();
+      if (actx && actx.state === 'suspended') actx.resume();
+    } catch (e) {}
+  }
+  function beep() {
+    try {
+      if (!actx) return;
+      [0, 0.3, 0.6].forEach(t0 => {
+        const o = actx.createOscillator(), g = actx.createGain(), at = actx.currentTime + t0;
+        o.frequency.value = 880;
+        g.gain.setValueAtTime(0.0001, at);
+        g.gain.exponentialRampToValueAtTime(0.2, at + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, at + 0.22);
+        o.connect(g); g.connect(actx.destination);
+        o.start(at); o.stop(at + 0.25);
+      });
+    } catch (e) {}
+  }
+  function startTimer(h) {
+    if (state.timer) stopTimer();
+    unlockAudio();
+    state.timer = { id: h.id, k: key(today()), start: Date.now() };
+    save();
+  }
+  function stopTimer() {
+    const t = state.timer;
+    if (!t) return;
+    state.timer = null;
+    const h = state.habits.find(x => x.id === t.id);
+    if (!h) { save(); return; }
+    const e = Object.assign({}, entry(h, t.k) || {});
+    e.m = Math.round(((e.m || 0) + (Date.now() - t.start) / 60000) * 10) / 10;
+    if (!e.d && h.minutes && e.m >= h.minutes) { e.d = 1; e.at = nowHM(); e.late = lateIfNow(h, t.k); }
+    putEntry(h, t.k, e);
+  }
+  function clock(min) {
+    const s = Math.max(0, Math.floor(min * 60)), hh = Math.floor(s / 3600), mm = Math.floor(s / 60) % 60, ss = s % 60;
+    return (hh ? hh + ':' + pad(mm) : mm) + ':' + pad(ss);
+  }
+  function fmtMins(m) {
+    m = Math.round(m);
+    return m < 60 ? m + ' min' : Math.floor(m / 60) + ' h' + (m % 60 ? ' ' + (m % 60) + ' min' : '');
+  }
+  function tick() {
+    const t = state.timer, bar = document.getElementById('timerbar');
+    if (!t) { bar.hidden = true; document.body.classList.remove('timing'); return; }
+    const h = state.habits.find(x => x.id === t.id);
+    if (!h) { state.timer = null; save(); bar.hidden = true; document.body.classList.remove('timing'); return; }
+    const e = entry(h, t.k) || {};
+    const total = (e.m || 0) + (Date.now() - t.start) / 60000;
+    const txt = clock(total);
+    bar.hidden = false; document.body.classList.add('timing');
+    bar.querySelector('.tb-name').textContent = h.name;
+    bar.querySelector('.tb-goal').textContent = h.minutes ? (total >= h.minutes ? 'Goal of ' + h.minutes + ' min reached' : 'Goal ' + h.minutes + ' min') : 'Timing';
+    bar.querySelector('.tb-time').textContent = txt;
+    document.querySelectorAll('.live').forEach(n => { if (n.dataset.id === h.id) n.textContent = txt; });
+    if (h.minutes && total >= h.minutes && !e.d) {
+      putEntry(h, t.k, Object.assign({}, e, { d: 1, at: nowHM(), late: lateIfNow(h, t.k) }));
+      beep();
+      if (!ui.draft) render();
+    }
   }
 
   // Completion rate 0..1 of one habit over [s, e]; null when nothing was expected.
@@ -324,7 +471,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
     if (h.freq === 'daily') {
       let exp = 0, done = 0;
       for (let d = s < c ? c : s; d <= e; d = addDays(d, 1)) {
-        if (h.days.indexOf(d.getDay()) >= 0) { exp++; if (isDone(h, key(d))) done++; }
+        if (h.days.indexOf(d.getDay()) >= 0) { exp++; done += credit(h, key(d)); }
       }
       return exp ? done / exp : null;
     }
@@ -335,14 +482,14 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
       const first = weekStart(c);
       for (; m <= e; m = addDays(m, 7)) {
         if (m < first) continue;
-        rates.push(Math.min(1, countIn(h, m, addDays(m, 6)) / h.target));
+        rates.push(Math.min(1, creditIn(h, m, addDays(m, 6)) / h.target));
       }
     } else {
       let m = monthStart(s); if (m < s) m = addMonths(m, 1);
       const first = monthStart(c);
       for (; m <= e; m = addMonths(m, 1)) {
         if (m < first) continue;
-        rates.push(Math.min(1, countIn(h, m, monthEnd(m)) / h.target));
+        rates.push(Math.min(1, creditIn(h, m, monthEnd(m)) / h.target));
       }
     }
     return rates.length ? rates.reduce((a, b) => a + b, 0) / rates.length : null;
@@ -406,18 +553,25 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
     left: '<svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>',
     right: '<svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>',
     plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
-    chev: '<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>'
+    chev: '<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>',
+    play: '<svg viewBox="0 0 12 12"><path d="M2.5 1.2v9.6L10.5 6z"/></svg>',
+    stop: '<svg viewBox="0 0 12 12"><rect x="1" y="1" width="10" height="10" rx="2"/></svg>'
   };
+  function timeText(h) {
+    if (!h.time || h.timeMode === 'none') return '';
+    return (h.timeMode === 'by' ? 'by ' : '') + fmtTime(h.time);
+  }
 
   /* ---------- ui state ---------- */
   const ui = { tab: 'today', date: today(), mode: 'days', sel: null, draft: null };
   const view = document.getElementById('view');
 
   function render() {
-    document.querySelectorAll('.tabs button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === ui.tab)));
+    document.querySelectorAll('.tabs .in button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === ui.tab)));
     if (ui.tab === 'today') renderToday();
     else if (ui.tab === 'progress') renderProgress();
     else renderHabits();
+    tick();
   }
 
   function exampleBanner() {
@@ -461,15 +615,43 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
       '</div>';
 
     const row = (h, extra, met) => {
-      const on = isDone(h, k);
+      const e = entry(h, k), on = !!(e && e.d);
       const meta = [];
-      if (h.time) meta.push('<span class="num">' + esc(fmtTime(h.time)) + '</span>');
+      let lateCls = '';
+      if (h.time && h.timeMode === 'by') {
+        const due = esc(fmtTime(h.time));
+        const at = e && e.at ? ' · ' + esc(fmtTime(e.at)) : '';
+        if (on && e.late) {
+          lateCls = ' late';
+          meta.push('<span class="tag late">Late' + at + '</span><button class="mini" data-act="flip-late" data-id="' + h.id + '">Mark on time</button>');
+        } else if (on) {
+          meta.push('<span class="tag">On time' + at + '</span><button class="mini" data-act="flip-late" data-id="' + h.id + '">Mark late</button>');
+        } else if (d < t || (isToday && nowHM() > h.time)) {
+          lateCls = ' late';
+          meta.push('<span class="tag late">' + (isToday ? 'Overdue' : 'Missed') + ' · due ' + due + '</span>');
+        } else {
+          meta.push('<span>Due by <span class="num">' + due + '</span></span>');
+        }
+      } else if (h.time && h.timeMode === 'at') {
+        meta.push('<span class="num">' + esc(fmtTime(h.time)) + '</span>');
+      }
       meta.push(weightPips(h.weight));
+      if (h.minutes) {
+        const m = e && e.m || 0;
+        meta.push('<span class="num">' + (m ? fmtMins(m) + ' of ' + h.minutes + ' min' : h.minutes + ' min goal') + '</span>');
+      }
       if (extra) meta.push(extra);
+      let right = '<span class="chev">' + ICON.chev + '</span>';
+      if (h.minutes && isToday) {
+        const running = state.timer && state.timer.id === h.id;
+        right = running
+          ? '<button class="tbtn on" data-act="timer-stop" aria-label="Stop timer for ' + esc(h.name) + '">' + ICON.stop + '<span class="live num" data-id="' + h.id + '"></span></button>'
+          : '<button class="tbtn" data-act="timer-start" data-id="' + h.id + '" aria-label="Start timer for ' + esc(h.name) + '">' + ICON.play + 'Start</button>';
+      }
       return '<div class="row' + (on ? ' done' : '') + '">' +
-        '<button class="check' + (!on && met ? ' partial' : '') + '" data-act="toggle" data-id="' + h.id + '" aria-pressed="' + on + '" aria-label="' + (on ? 'Mark not done: ' : 'Mark done: ') + esc(h.name) + '">' + ICON.check + '</button>' +
-        '<button class="info" data-act="edit" data-id="' + h.id + '"><div class="name">' + esc(h.name) + '</div><div class="meta">' + meta.join('') + '</div></button>' +
-        '<span class="chev">' + ICON.chev + '</span></div>';
+        '<button class="check' + (!on && met ? ' partial' : '') + lateCls + '" data-act="toggle" data-id="' + h.id + '" aria-pressed="' + on + '" aria-label="' + (on ? 'Mark not done: ' : 'Mark done: ') + esc(h.name) + '">' + ICON.check + '</button>' +
+        '<div class="info" role="button" tabindex="0" data-act="edit" data-id="' + h.id + '"><div class="name">' + esc(h.name) + '</div><div class="meta">' + meta.join('') + '</div></div>' +
+        right + '</div>';
     };
 
     if (daily.length) html += '<div class="sec-h"><span>Daily</span><span class="num">' + doneDaily + '/' + daily.length + '</span></div><div class="group">' + daily.map(h => row(h)).join('') + '</div>';
@@ -555,12 +737,14 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
       '<div class="hint">' + (ui.mode === 'days' ? 'Day bars count daily habits. Weekly and monthly goals show in Weeks and Months.' : 'Tap a bar to see that period.') + '</div></div>';
 
     const s = ps[0].s, t = today();
-    const rows = active().map(h => ({ h, r: habitRate(h, s, t, true), st: streak(h) }))
+    const rows = active().map(h => ({ h, r: habitRate(h, s, t, true), st: streak(h), x: statsIn(h, s, t) }))
       .sort((a, b) => b.h.weight - a.h.weight || (b.r || 0) - (a.r || 0));
     const span = ui.mode === 'days' ? 'last 14 days' : ui.mode === 'weeks' ? 'last 12 weeks' : 'last 12 months';
     html += '<div class="sec-h"><span>By habit</span><span>' + span + '</span></div><div class="group">' +
       rows.map(o => '<div class="prow"><div class="line1"><span class="name">' + esc(o.h.name) + '</span><span class="pct num">' + pct(o.r) + (o.r === null ? '' : '%') + '</span></div>' +
-        '<div class="meta">' + weightPips(o.h.weight) + '<span>' + esc(schedule(o.h)) + '</span>' + (o.st ? '<span class="tag">' + esc(o.st) + '</span>' : '') + '</div>' +
+        '<div class="meta">' + weightPips(o.h.weight) + '<span>' + esc(schedule(o.h)) + '</span>' + (o.st ? '<span class="tag">' + esc(o.st) + '</span>' : '') +
+        (o.h.timeMode === 'by' && o.h.time ? (o.x.late ? '<span class="tag late num">Late ' + o.x.late + '×</span>' : '<span>Never late</span>') : '') +
+        (o.x.mins ? '<span class="num">' + fmtMins(o.x.mins) + ' total</span>' : '') + '</div>' +
         '<div class="meter"><i style="width:' + (o.r === null ? 0 : Math.round(o.r * 100)) + '%"></i></div></div>').join('') + '</div>';
     view.innerHTML = html;
   }
@@ -576,7 +760,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
       const order = { daily: 0, weekly: 1, monthly: 2 };
       const list = state.habits.slice().sort((a, b) => order[a.freq] - order[b.freq] || byTime(a, b));
       html += '<div class="group">' + list.map(h => '<button class="row" style="width:100%" data-act="edit" data-id="' + h.id + '">' +
-        '<div class="info"><div class="name">' + esc(h.name) + '</div><div class="meta"><span>' + esc(schedule(h)) + (h.time ? ' · <span class="num">' + esc(fmtTime(h.time)) + '</span>' : '') + '</span>' +
+        '<div class="info"><div class="name">' + esc(h.name) + '</div><div class="meta"><span>' + esc(schedule(h)) + (timeText(h) ? ' · <span class="num">' + esc(timeText(h)) + '</span>' : '') + (h.minutes ? ' · ' + h.minutes + ' min timer' : '') + '</span>' +
         weightPips(h.weight) + '<span>' + WEIGHT_NAMES[h.weight] + '</span></div></div><span class="chev">' + ICON.chev + '</span></button>').join('') + '</div>';
     }
     html += '<button class="small-danger" data-act="reset" data-confirm="Tap again to erase everything">Erase all data</button>';
@@ -588,8 +772,8 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 
   function openSheet(h) {
     ui.draft = h
-      ? { id: h.id, name: h.name, freq: h.freq, days: h.days.slice(), target: h.target, time: h.time, weight: h.weight, isNew: false, err: '' }
-      : { id: null, name: '', freq: 'daily', days: [0, 1, 2, 3, 4, 5, 6], target: 3, time: '', weight: 3, isNew: true, err: '' };
+      ? { id: h.id, name: h.name, freq: h.freq, days: h.days.slice(), target: h.target, time: h.time, timeMode: h.timeMode, minutes: h.minutes, weight: h.weight, isNew: false, err: '' }
+      : { id: null, name: '', freq: 'daily', days: [0, 1, 2, 3, 4, 5, 6], target: 3, time: '', timeMode: 'none', minutes: 0, weight: 3, isNew: true, err: '' };
     renderSheet();
     sheet.hidden = false; scrim.hidden = false;
     document.body.style.overflow = 'hidden';
@@ -617,8 +801,17 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
         ? '<div class="days" role="group" aria-label="Days">' + DAY_ORDER.map(x => '<button data-act="day" data-v="' + x + '" aria-pressed="' + (d.days.indexOf(x) >= 0) + '" aria-label="' + DAY_SHORT[x] + '">' + DAY_SHORT[x].charAt(0) + '</button>').join('') + '</div>'
         : '<div class="stepper"><button data-act="tgt" data-v="-1" aria-label="Fewer">−</button><div class="v num">' + d.target + '× a ' + (d.freq === 'weekly' ? 'week' : 'month') + '</div><button data-act="tgt" data-v="1" aria-label="More">+</button></div>') +
       '</div>' +
-      '<div class="field"><label for="f-time">Time <span style="text-transform:none;letter-spacing:0;font-weight:400">(optional)</span></label><div class="timebox"><input class="input" type="time" id="f-time" value="' + esc(d.time) + '">' +
-      '<button class="link" data-act="time-clear"' + (d.time ? '' : ' hidden') + ' id="time-clear">Clear</button></div></div>' +
+      '<div class="field"><span class="lbl">Time</span><div class="seg">' +
+      [['none', 'No time'], ['at', 'At a time'], ['by', 'Done by']].map(m => '<button data-act="tmode" data-v="' + m[0] + '" aria-pressed="' + (d.timeMode === m[0]) + '">' + m[1] + '</button>').join('') + '</div>' +
+      (d.timeMode === 'none' ? '' :
+        '<input class="input" type="time" id="f-time" aria-label="Time" value="' + esc(d.time) + '">' +
+        '<div class="help">' + (d.timeMode === 'by'
+          ? 'Check it off before this time. After it, the habit shows as late and counts half toward your score.'
+          : 'Shown on the habit as the time to do it.') + '</div>') + '</div>' +
+      '<div class="field"><span class="lbl">Timer</span><div class="seg">' +
+      '<button data-act="timer-opt" data-v="0" aria-pressed="' + !d.minutes + '">Off</button><button data-act="timer-opt" data-v="1" aria-pressed="' + !!d.minutes + '">On</button></div>' +
+      (d.minutes ? '<div class="stepper"><button data-act="mins" data-v="-5" aria-label="5 minutes less">−</button><div class="v num">' + fmtMins(d.minutes) + ' a session</div><button data-act="mins" data-v="5" aria-label="5 minutes more">+</button></div>' +
+        '<div class="help">Start the timer from Today. The habit is checked off when you reach the goal. Time short of the goal still counts partly.</div>' : '') + '</div>' +
       '<div class="field"><span class="lbl">Weight</span><div class="weights" role="group" aria-label="Weight">' +
       [1, 2, 3, 4, 5].map(w => '<button data-act="weight" data-v="' + w + '" aria-pressed="' + (d.weight === w) + '"><span class="n num">' + w + '</span>' + weightPips(w) + '</button>').join('') + '</div>' +
       '<div class="help"><b>' + WEIGHT_NAMES[d.weight] + '.</b> Missing a weight-5 habit lowers your score five times more than missing a weight-1 habit.</div></div>' +
@@ -632,7 +825,10 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
     d.name = d.name.trim();
     if (!d.name) { d.err = 'Give the habit a name.'; renderSheet(); return; }
     if (d.freq === 'daily' && !d.days.length) { d.err = 'Pick at least one day.'; renderSheet(); return; }
-    const data = { name: d.name, freq: d.freq, days: d.freq === 'daily' ? d.days.slice().sort() : [], target: d.freq === 'daily' ? 1 : d.target, time: d.time || '', weight: d.weight };
+    if (d.timeMode !== 'none' && !d.time) { d.err = 'Pick a time, or set Time to "No time".'; renderSheet(); return; }
+    const data = { name: d.name, freq: d.freq, days: d.freq === 'daily' ? d.days.slice().sort() : [], target: d.freq === 'daily' ? 1 : d.target,
+      time: d.timeMode === 'none' ? '' : d.time, timeMode: d.timeMode, minutes: d.minutes, weight: d.weight };
+    if (!d.minutes && state.timer && state.timer.id === d.id) stopTimer();
     if (d.isNew) state.habits.push(Object.assign({ id: uid(), created: key(today()) }, data));
     else Object.assign(state.habits.find(h => h.id === d.id), data);
     save(); closeSheet(); render();
@@ -658,28 +854,43 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
       case 'prev': ui.date = addDays(ui.date, -1); render(); break;
       case 'next': if (ui.date < today()) ui.date = addDays(ui.date, 1); render(); break;
       case 'go-today': ui.date = today(); render(); break;
-      case 'toggle': { const h = find(); if (h) { const k = key(ui.date); setDone(h, k, !isDone(h, k)); render(); } break; }
+      case 'toggle': {
+        const h = find(); if (!h) break;
+        const k = key(ui.date);
+        if (isDone(h, k)) {
+          if (state.timer && state.timer.id === h.id) state.timer = null;
+          putEntry(h, k, null);
+        } else markDone(h, k);
+        render(); break;
+      }
+      case 'flip-late': { const h = find(), k = key(ui.date), x = h && entry(h, k); if (x) { putEntry(h, k, Object.assign({}, x, { late: !x.late })); render(); } break; }
+      case 'timer-start': { const h = find(); if (h) { startTimer(h); render(); } break; }
+      case 'timer-stop': stopTimer(); render(); break;
+      case 'tmode': syncInputs(); ui.draft.timeMode = el.dataset.v; ui.draft.err = ''; renderSheet(); break;
+      case 'timer-opt': syncInputs(); ui.draft.minutes = el.dataset.v === '1' ? (ui.draft.minutes || 30) : 0; renderSheet(); break;
+      case 'mins': syncInputs(); ui.draft.minutes = Math.max(5, Math.min(600, ui.draft.minutes + Number(el.dataset.v))); renderSheet(); break;
       case 'edit': { const h = find(); if (h) openSheet(h); break; }
       case 'new': openSheet(null); break;
       case 'mode': ui.mode = el.dataset.mode; ui.sel = null; render(); break;
       case 'bar': ui.sel = Number(el.dataset.i); render(); break;
       case 'clear-examples': {
         const ids = state.habits.filter(h => h.example).map(h => h.id);
+        if (state.timer && ids.indexOf(state.timer.id) >= 0) state.timer = null;
         state.habits = state.habits.filter(h => !h.example);
         Object.keys(state.log).forEach(k => { ids.forEach(id => delete state.log[k][id]); if (!Object.keys(state.log[k]).length) delete state.log[k]; });
         state.example = false; save(); render(); break;
       }
-      case 'reset': if (armed(el)) { state = { habits: [], log: {}, example: false }; save(); render(); } break;
+      case 'reset': if (armed(el)) { state = { habits: [], log: {}, example: false, timer: null }; save(); render(); } break;
       case 'cancel': closeSheet(); break;
       case 'freq': syncInputs(); ui.draft.freq = el.dataset.v; ui.draft.err = ''; if (ui.draft.freq !== 'daily' && ui.draft.target < 1) ui.draft.target = 1; renderSheet(); break;
       case 'day': { syncInputs(); const v = Number(el.dataset.v), ds = ui.draft.days, i = ds.indexOf(v); if (i >= 0) ds.splice(i, 1); else ds.push(v); ui.draft.err = ''; renderSheet(); break; }
       case 'tgt': { syncInputs(); const max = ui.draft.freq === 'weekly' ? 7 : 31; ui.draft.target = Math.max(1, Math.min(max, ui.draft.target + Number(el.dataset.v))); renderSheet(); break; }
       case 'weight': syncInputs(); ui.draft.weight = Number(el.dataset.v); renderSheet(); break;
-      case 'time-clear': syncInputs(); ui.draft.time = ''; renderSheet(); break;
       case 'save': saveDraft(); break;
       case 'delete':
         if (armed(el)) {
           const id = ui.draft.id;
+          if (state.timer && state.timer.id === id) state.timer = null;
           state.habits = state.habits.filter(h => h.id !== id);
           Object.keys(state.log).forEach(k => { delete state.log[k][id]; if (!Object.keys(state.log[k]).length) delete state.log[k]; });
           save(); closeSheet(); render();
@@ -687,8 +898,8 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
         break;
     }
   });
-  sheet.addEventListener('input', e => {
-    if (e.target.id === 'f-time') { const c = document.getElementById('time-clear'); if (c) c.hidden = !e.target.value; }
+  view.addEventListener('keydown', e => {
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[role="button"][data-act]')) { e.preventDefault(); e.target.click(); }
   });
   sheet.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'f-name') { e.preventDefault(); saveDraft(); } });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && ui.draft) closeSheet(); });
@@ -698,8 +909,12 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') return;
     const k = key(today());
-    if (k !== lastDay) { if (key(ui.date) === lastDay) ui.date = today(); lastDay = k; if (!ui.draft) render(); }
+    if (k !== lastDay) { if (key(ui.date) === lastDay) ui.date = today(); lastDay = k; }
+    if (!ui.draft) render();
   });
+  setInterval(tick, 1000);
+  // Refresh Today every 30 s so deadlines turn "Overdue" without a reload.
+  setInterval(() => { if (!ui.draft && ui.tab === 'today' && document.visibilityState === 'visible') render(); }, 30000);
 
   try {
     if (window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches) document.documentElement.classList.add('standalone');
