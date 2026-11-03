@@ -218,6 +218,21 @@ body.timing .wrap { padding-bottom: calc(160px + env(safe-area-inset-bottom, 0px
 .stepper { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 6px; }
 .stepper button { width: 40px; height: 40px; border-radius: 10px; background: var(--bg); font-size: 22px; font-weight: 500; }
 .stepper .v { flex: 1; text-align: center; font-size: 17px; font-weight: 600; }
+.slider { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px 10px; display: flex; flex-direction: column; gap: 8px; }
+.slider .v { font-size: 17px; font-weight: 600; text-align: center; }
+.slider .ends { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+.slider input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 32px; margin: 0; background: transparent; }
+.slider input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px; border-radius: 2px;
+  background: linear-gradient(to right, var(--accent) 0 var(--p), var(--line) var(--p) 100%); /* hard stop = filled part */
+}
+.slider input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; width: 28px; height: 28px; margin-top: -12px; border-radius: 50%;
+  background: #FFFFFF; border: 0.5px solid rgba(0,0,0,.04); box-shadow: 0 1px 4px rgba(0,0,0,.25), 0 3px 8px rgba(0,0,0,.1);
+}
+.slider input[type="range"]::-moz-range-track { height: 4px; border-radius: 2px; background: var(--line); }
+.slider input[type="range"]::-moz-range-progress { height: 4px; border-radius: 2px; background: var(--accent); }
+.slider input[type="range"]::-moz-range-thumb { width: 28px; height: 28px; border: 0; border-radius: 50%; background: #FFFFFF; box-shadow: 0 1px 4px rgba(0,0,0,.25); }
 .timebox { display: flex; gap: 8px; align-items: center; }
 .timebox .input { flex: 1; }
 .weights { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
@@ -557,6 +572,7 @@ body.timing .wrap { padding-bottom: calc(160px + env(safe-area-inset-bottom, 0px
     play: '<svg viewBox="0 0 12 12"><path d="M2.5 1.2v9.6L10.5 6z"/></svg>',
     stop: '<svg viewBox="0 0 12 12"><rect x="1" y="1" width="10" height="10" rx="2"/></svg>'
   };
+  const sliderPct = (v, max) => ((v - 1) / (max - 1)) * 100;
   function timeText(h) {
     if (!h.time || h.timeMode === 'none') return '';
     return (h.timeMode === 'by' ? 'by ' : '') + fmtTime(h.time);
@@ -810,7 +826,9 @@ body.timing .wrap { padding-bottom: calc(160px + env(safe-area-inset-bottom, 0px
           : 'Shown on the habit as the time to do it.') + '</div>') + '</div>' +
       '<div class="field"><span class="lbl">Timer</span><div class="seg">' +
       '<button data-act="timer-opt" data-v="0" aria-pressed="' + !d.minutes + '">Off</button><button data-act="timer-opt" data-v="1" aria-pressed="' + !!d.minutes + '">On</button></div>' +
-      (d.minutes ? '<div class="stepper"><button data-act="mins" data-v="-5" aria-label="5 minutes less">−</button><div class="v num">' + fmtMins(d.minutes) + ' a session</div><button data-act="mins" data-v="5" aria-label="5 minutes more">+</button></div>' +
+      (d.minutes ? '<div class="slider"><div class="v num" id="f-mins-v">' + fmtMins(d.minutes) + ' a session</div>' +
+        '<input type="range" id="f-mins" min="1" max="' + Math.max(180, d.minutes) + '" step="1" value="' + d.minutes + '" aria-label="Minutes per session" style="--p:' + sliderPct(d.minutes, Math.max(180, d.minutes)) + '%">' +
+        '<div class="ends"><span>1 min</span><span>' + fmtMins(Math.max(180, d.minutes)) + '</span></div></div>' +
         '<div class="help">Start the timer from Today. The habit is checked off when you reach the goal. Time short of the goal still counts partly.</div>' : '') + '</div>' +
       '<div class="field"><span class="lbl">Weight</span><div class="weights" role="group" aria-label="Weight">' +
       [1, 2, 3, 4, 5].map(w => '<button data-act="weight" data-v="' + w + '" aria-pressed="' + (d.weight === w) + '"><span class="n num">' + w + '</span>' + weightPips(w) + '</button>').join('') + '</div>' +
@@ -897,6 +915,14 @@ body.timing .wrap { padding-bottom: calc(160px + env(safe-area-inset-bottom, 0px
         }
         break;
     }
+  });
+  // Slider updates the label live without re-rendering, so the drag isn't interrupted.
+  sheet.addEventListener('input', e => {
+    if (e.target.id !== 'f-mins' || !ui.draft) return;
+    const v = Number(e.target.value);
+    ui.draft.minutes = v;
+    e.target.style.setProperty('--p', sliderPct(v, Number(e.target.max)) + '%');
+    document.getElementById('f-mins-v').textContent = fmtMins(v) + ' a session';
   });
   view.addEventListener('keydown', e => {
     if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[role="button"][data-act]')) { e.preventDefault(); e.target.click(); }
